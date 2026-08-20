@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+
+# Secrets - never commit
+.env
+
+# Dependencies & build output
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime data
+uploads/
+
+# Upstream reference material (kept local, not part of the app)
+MiroFish-main/
+oasis-main/
+*.zip
+*.pdf
