@@ -20,6 +20,7 @@ Usage:
 """
 
 import logging
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -47,6 +48,12 @@ _PROVIDER_PREFIXES: Dict[str, str] = {
 
 # Providers that do NOT need a base_url (they have native litellm support)
 _NATIVE_PROVIDERS = {"anthropic", "deepseek", "azure", "bedrock", "vertex_ai", "cohere", "mistral"}
+
+# Claude 5 家族及 Opus 4.7/4.8 已移除采样参数（temperature/top_p/top_k），
+# 请求中携带会被 Anthropic API 以 400 拒绝
+_SAMPLING_REMOVED_PATTERN = re.compile(
+    r"(fable-5|mythos-5|opus-5|sonnet-5|opus-4-7|opus-4-8)"
+)
 
 
 def _build_model_name(provider: str, model: str) -> str:
@@ -164,6 +171,10 @@ class UnifiedLLMClient:
             call_kwargs["api_base"] = self.base_url
 
         call_kwargs.update(kwargs)
+
+        if _SAMPLING_REMOVED_PATTERN.search(self._litellm_model):
+            for _param in ("temperature", "top_p", "top_k"):
+                call_kwargs.pop(_param, None)
 
         last_error: Optional[Exception] = None
 
