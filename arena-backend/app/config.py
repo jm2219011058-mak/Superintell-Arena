@@ -33,6 +33,10 @@ class Config:
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
 
+    # 思想家蒸馏配置：整本书级资料用便宜模型蒸馏成人设卡
+    LLM_DISTILL_MODEL_NAME = os.environ.get('LLM_DISTILL_MODEL_NAME')  # 为空则用 LLM_MODEL_NAME
+    THINKER_DISTILL_THRESHOLD = int(os.environ.get('THINKER_DISTILL_THRESHOLD', '50000'))  # 字符数
+
     # 加速 LLM 配置（可选，用于并行模拟加速）
     LLM_BOOST_PROVIDER = os.environ.get('LLM_BOOST_PROVIDER', None)
     LLM_BOOST_API_KEY = os.environ.get('LLM_BOOST_API_KEY', None)

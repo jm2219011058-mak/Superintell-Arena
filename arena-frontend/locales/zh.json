@@ -62,7 +62,7 @@
     "step05Desc": "与辩论中的任意思想家对话 & 与ReportAgent进行深度交互",
     "realitySeed": "01 / 知识库种子",
     "thinkerMemory": "02 / 思想家记忆注入",
-    "thinkerMemoryHint": "人设 / 观点 / 访谈 / 著作（可选）",
+    "thinkerMemoryHint": "人设 / 访谈 / 著作，整本书自动蒸馏（可选）",
     "supportedFormats": "支持格式: PDF, MD, TXT",
     "dragToUpload": "拖拽文件上传",
     "orBrowse": "或点击浏览文件系统",

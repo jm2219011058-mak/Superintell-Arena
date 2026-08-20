@@ -201,7 +201,8 @@ def generate_ontology():
                 all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
         
         # 思想家记忆文件（独立上传入口，可选）：在语料中显式标注角色，
-        # 让本体/图谱生成能区分"知识库种子"与"思想家人设记忆"
+        # 让本体/图谱生成能区分"知识库种子"与"思想家人设记忆"。
+        # 整本书级别的资料先蒸馏成人设卡，避免几十万字直接进 prompt
         thinker_files = request.files.getlist('thinker_files')
         for file in thinker_files:
             if file and file.filename and allowed_file(file.filename):
@@ -210,14 +211,37 @@ def generate_ontology():
                     file,
                     file.filename
                 )
-                project.files.append({
+                file_entry = {
                     "filename": file_info["original_filename"],
                     "size": file_info["size"],
                     "role": "thinker_memory"
-                })
+                }
+                project.files.append(file_entry)
 
                 text = FileParser.extract_text(file_info["path"])
                 text = TextProcessor.preprocess_text(text)
+
+                if len(text) > Config.THINKER_DISTILL_THRESHOLD:
+                    logger.info(
+                        f"思想家资料超过 {Config.THINKER_DISTILL_THRESHOLD} 字，"
+                        f"启动蒸馏: {file_info['original_filename']}（{len(text)} 字）"
+                    )
+                    try:
+                        from ..services.thinker_distiller import ThinkerDistiller
+                        card = ThinkerDistiller().distill(text, file_info["original_filename"])
+                        file_entry["distilled"] = True
+                        document_texts.append(card)
+                        all_text += (
+                            f"\n\n=== [思想家记忆·人设卡] {file_info['original_filename']}"
+                            f"（原文 {len(text)} 字已蒸馏）===\n{card}"
+                        )
+                        continue
+                    except Exception as distill_err:
+                        # 蒸馏失败不阻塞上传：回退为截断文本
+                        logger.error(f"蒸馏失败，回退为截断文本: {distill_err}")
+                        text = text[:Config.THINKER_DISTILL_THRESHOLD]
+                        file_entry["distill_failed"] = True
+
                 document_texts.append(text)
                 all_text += f"\n\n=== [思想家记忆] {file_info['original_filename']} ===\n{text}"
 

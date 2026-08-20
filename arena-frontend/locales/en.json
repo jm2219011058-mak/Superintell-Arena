@@ -62,7 +62,7 @@
     "step05Desc": "Chat with any thinker from the debate & deep interaction with ReportAgent",
     "realitySeed": "01 / Knowledge Seeds",
     "thinkerMemory": "02 / Thinker Memory Injection",
-    "thinkerMemoryHint": "Personas / views / interviews / works (optional)",
+    "thinkerMemoryHint": "Personas / interviews / works; whole books auto-distill (optional)",
     "supportedFormats": "Formats: PDF, MD, TXT",
     "dragToUpload": "Drag files to upload",
     "orBrowse": "or click to browse files",
