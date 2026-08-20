@@ -6,16 +6,17 @@ import service, { requestWithRetry } from './index'
  * @returns {Promise}
  */
 export function generateOntology(formData) {
-  return requestWithRetry(() => 
-    service({
-      url: '/api/graph/ontology/generate',
-      method: 'post',
-      data: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-  )
+  // 不能包 requestWithRetry：本接口非幂等且昂贵（整本书蒸馏 + 本体生成，
+  // 可能跑 10 分钟以上），超时重试会重复建项目、重复烧 token
+  return service({
+    url: '/api/graph/ontology/generate',
+    method: 'post',
+    data: formData,
+    timeout: 1800000, // 30 分钟：书籍蒸馏是长任务
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 }
 
 /**
