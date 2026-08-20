@@ -783,10 +783,44 @@ watch(() => props.systemLogs?.length, () => {
   })
 })
 
-onMounted(() => {
+// 进入页面时先探测既有运行状态：
+// - running：接入实时监控（绝不能 force 重启一场进行中的辩论）
+// - completed / failed / stopped：回放模式，加载历史动作
+// - 无运行记录：正常启动新模拟
+const tryResumeExisting = async () => {
+  try {
+    const res = await getRunStatus(props.simulationId)
+    const st = res?.data?.runner_status
+    if (!res?.success || !st || st === 'ready' || st === 'not_started') return false
+
+    runStatus.value = res.data
+
+    if (st === 'running' || st === 'starting') {
+      addLog(t('log.resumeRunning'))
+      phase.value = 1
+      emit('update-status', 'processing')
+      await fetchRunStatusDetail()
+      startStatusPolling()
+      startDetailPolling()
+    } else {
+      addLog(t('log.resumeReplay', { status: st }))
+      phase.value = 2
+      emit('update-status', st === 'failed' ? 'error' : 'completed')
+      await fetchRunStatusDetail()
+    }
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+onMounted(async () => {
   addLog(t('log.step3Init'))
   if (props.simulationId) {
-    doStartSimulation()
+    const resumed = await tryResumeExisting()
+    if (!resumed) {
+      doStartSimulation()
+    }
   }
 })
 

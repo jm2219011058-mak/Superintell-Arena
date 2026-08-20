@@ -76,6 +76,7 @@
   "main": {
     "layoutGraph": "Graph",
     "layoutSplit": "Split",
+    "confirmLeaveRunning": "The debate is still running. Going back to env setup will stop it. Stop and leave? (Tip: clicking MEGA X to go home does NOT stop the debate; return anytime via Live Debate in history.)",
     "layoutWorkbench": "Workbench",
     "stepNames": ["Graph Build", "Debate Config", "Debate Sim", "Insight Report", "Deep Interaction"]
   },
@@ -314,6 +315,7 @@
     "replayTitle": "Simulation Replay",
     "step1Button": "Graph Build",
     "step2Button": "Env Setup",
+    "step3Button": "Live Debate",
     "step4Button": "Analysis Report",
     "replayHint": "Step 3 'Run Simulation' and Step 5 'Deep Interaction' must be started during runtime and do not support history replay",
     "notStarted": "Not started",
@@ -527,6 +529,8 @@
     "loadConfigFailed": "Failed to load config: {error}",
     "step2Init": "Step 2 environment setup initialized",
     "step3Init": "Step 3 simulation run initialized",
+    "resumeRunning": "Ongoing debate detected; attached to live monitor",
+    "resumeReplay": "Loaded past debate in replay mode (status: {status})",
     "startingDualSim": "Starting dual-platform parallel simulation...",
     "setMaxRounds": "Max simulation rounds set to: {rounds}",
     "graphMemoryUpdateEnabled": "Dynamic graph memory update enabled",

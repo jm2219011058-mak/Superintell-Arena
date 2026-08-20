@@ -76,6 +76,7 @@
   "main": {
     "layoutGraph": "图谱",
     "layoutSplit": "双栏",
+    "confirmLeaveRunning": "辩论正在进行中，返回环境搭建将停止本场辩论。确定要停止并返回吗？（提示：点左上角 MEGA X 回主页不会停止辩论，可从推演记录的“辩论现场”随时回来）",
     "layoutWorkbench": "工作台",
     "stepNames": ["图谱构建", "辩论配置", "辩论模拟", "洞察报告", "深度互动"]
   },
@@ -314,6 +315,7 @@
     "replayTitle": "推演回放",
     "step1Button": "图谱构建",
     "step2Button": "环境搭建",
+    "step3Button": "辩论现场",
     "step4Button": "分析报告",
     "replayHint": "Step3「开始模拟」与 Step5「深度互动」需在运行中启动，不支持历史回放",
     "notStarted": "未开始",
@@ -527,6 +529,8 @@
     "loadConfigFailed": "加载配置失败: {error}",
     "step2Init": "Step2 环境搭建初始化",
     "step3Init": "Step3 模拟运行初始化",
+    "resumeRunning": "检测到进行中的辩论，已接入实时监控",
+    "resumeReplay": "以回放模式加载历史辩论（状态：{status}）",
     "startingDualSim": "正在启动双平台并行模拟...",
     "setMaxRounds": "设置最大模拟轮数: {rounds}",
     "graphMemoryUpdateEnabled": "已开启动态图谱更新模式",

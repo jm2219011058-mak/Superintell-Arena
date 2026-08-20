@@ -169,8 +169,17 @@
                 <span class="btn-icon">◈</span>
                 <span class="btn-text">{{ $t('history.step2Button') }}</span>
               </button>
-              <button 
-                class="modal-btn btn-report" 
+              <button
+                class="modal-btn btn-run"
+                @click="goToRunView"
+                :disabled="!selectedProject.simulation_id"
+              >
+                <span class="btn-step">Step3</span>
+                <span class="btn-icon">◉</span>
+                <span class="btn-text">{{ $t('history.step3Button') }}</span>
+              </button>
+              <button
+                class="modal-btn btn-report"
                 @click="goToReport"
                 :disabled="!selectedProject.report_id"
               >
@@ -292,9 +301,13 @@ const getCardStyle = (index) => {
 
 // 根据轮数进度获取样式类
 const getProgressClass = (simulation) => {
+  const status = simulation.status || simulation.runner_status
+  if (status === 'running') return 'in-progress'
+  if (status === 'failed') return 'failed'
+
   const current = simulation.current_round || 0
   const total = simulation.total_rounds || 0
-  
+
   if (total === 0 || current === 0) {
     // 未开始
     return 'not-started'
@@ -419,6 +432,17 @@ const goToSimulation = () => {
   if (selectedProject.value?.simulation_id) {
     router.push({
       name: 'Simulation',
+      params: { simulationId: selectedProject.value.simulation_id }
+    })
+    closeModal()
+  }
+}
+
+// 导航到辩论现场（Step3 运行监控）：运行中/失败/已完成的模拟都能进
+const goToRunView = () => {
+  if (selectedProject.value?.simulation_id) {
+    router.push({
+      name: 'SimulationRun',
       params: { simulationId: selectedProject.value.simulation_id }
     })
     closeModal()
@@ -749,6 +773,8 @@ onUnmounted(() => {
 /* 进度状态颜色 */
 .card-progress.completed { color: #10B981; }    /* 已完成 - 绿色 */
 .card-progress.in-progress { color: #F59E0B; }  /* 进行中 - 橙色 */
+.card-progress.failed { color: #F44336; }       /* 失败 - 红色 */
+.modal-progress.failed { color: #F44336; }
 .card-progress.not-started { color: #9CA3AF; }  /* 未开始 - 灰色 */
 .card-status.pending { color: #9CA3AF; }
 

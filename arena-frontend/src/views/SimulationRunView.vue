@@ -150,6 +150,11 @@ const toggleMaximize = (target) => {
 }
 
 const handleGoBack = async () => {
+  // 辩论进行中时返回会停止整场辩论：必须先经用户确认
+  if (isSimulating.value && !window.confirm(t('main.confirmLeaveRunning'))) {
+    return
+  }
+
   // 在返回 Step 2 之前，先关闭正在运行的模拟
   addLog(t('log.preparingGoBack'))
   
