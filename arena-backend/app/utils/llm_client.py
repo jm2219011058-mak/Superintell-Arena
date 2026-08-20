@@ -9,7 +9,6 @@ import re
 from typing import Optional, Dict, Any, List
 
 from ..config import Config
-from ..services.llm_client import UnifiedLLMClient
 
 
 class LLMClient:
@@ -26,6 +25,10 @@ class LLMClient:
         base_url: Optional[str] = None,
         model: Optional[str] = None
     ):
+        # 延迟导入：services 包的 __init__ 会反向导入本模块，
+        # 模块级导入会形成循环依赖导致启动崩溃
+        from ..services.llm_client import UnifiedLLMClient
+
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
         self.model = model or Config.LLM_MODEL_NAME
