@@ -149,16 +149,26 @@
             </span>
           </span>
         </div>
+        <div v-if="parties.length >= 2" class="feed-mode-toggle">
+          <button class="mode-btn" :class="{ active: feedMode === 'party' }" @click="feedMode = 'party'">分方对垒</button>
+          <button class="mode-btn" :class="{ active: feedMode === 'timeline' }" @click="feedMode = 'timeline'">时间线</button>
+        </div>
       </div>
       
-      <!-- Timeline Feed -->
-      <div class="timeline-feed">
+      <!-- Timeline Feed（单泳道 = 时间线；多泳道 = 分方对垒） -->
+      <div class="lanes-container" :class="{ 'party-mode': lanes.length > 1 }">
+        <div v-for="lane in lanes" :key="lane.name || '__all__'" class="timeline-feed lane">
+        <div v-if="lane.name" class="lane-header">
+          <div class="avatar-placeholder">{{ lane.name[0] }}</div>
+          <span class="lane-name">{{ lane.name }}</span>
+          <span class="lane-count mono">{{ lane.actions.length }}</span>
+        </div>
         <div class="timeline-axis"></div>
-        
+
         <TransitionGroup name="timeline-item">
-          <div 
-            v-for="action in chronologicalActions" 
-            :key="action._uniqueId || action.id || `${action.timestamp}-${action.agent_id}`" 
+          <div
+            v-for="action in lane.actions"
+            :key="action._uniqueId || action.id || `${action.timestamp}-${action.agent_id}`"
             class="timeline-item"
             :class="action.platform"
           >
@@ -270,6 +280,7 @@
             </div>
           </div>
         </TransitionGroup>
+        </div>
 
         <div v-if="allActions.length === 0" class="waiting-state">
           <div class="pulse-ring"></div>
@@ -339,6 +350,25 @@ const scrollContainer = ref(null)
 // 按时间顺序显示动作（最新的在最后面，即底部）
 const chronologicalActions = computed(() => {
   return allActions.value
+})
+
+// 分方对垒：多方辩论时按辩手分泳道展示每一方的完整辩论过程
+const feedMode = ref('party') // 'party' | 'timeline'
+const parties = computed(() => {
+  const names = []
+  for (const a of allActions.value) {
+    if (a.agent_name && !names.includes(a.agent_name)) names.push(a.agent_name)
+  }
+  return names
+})
+const lanes = computed(() => {
+  if (feedMode.value !== 'party' || parties.value.length < 2) {
+    return [{ name: null, actions: chronologicalActions.value }]
+  }
+  return parties.value.map(name => ({
+    name,
+    actions: chronologicalActions.value.filter(a => a.agent_name === name)
+  }))
 })
 
 // 各平台动作计数
@@ -1362,5 +1392,88 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-right: 6px;
+}
+
+/* ============ 分方对垒（多泳道）布局 ============ */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.feed-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #F5F5F5;
+  padding: 3px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.mode-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: #FFF;
+  color: #000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.lanes-container {
+  display: flex;
+  align-items: flex-start;
+}
+
+.lanes-container.party-mode {
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.lanes-container.party-mode .timeline-feed.lane {
+  flex: 1 1 0;
+  min-width: 300px;
+  border-left: 1px solid #EEE;
+  padding-left: 12px;
+}
+
+.lanes-container:not(.party-mode) .timeline-feed.lane {
+  flex: 1;
+}
+
+.lane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 12px;
+  border-bottom: 2px solid #000;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  background: #FFF;
+  z-index: 2;
+}
+
+.lane-name {
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lane-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #999;
 }
 </style>
