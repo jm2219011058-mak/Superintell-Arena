@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superintell Arena</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root { color-scheme: light; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background:#0a0a0f; color:#e4e4ed; overflow-x:hidden; }
+button { font-family:inherit; cursor:pointer; }
+input { font-family:inherit; }
+
+/* Tokens */
+:root {
+  --bg:#0a0a0f; --card:#12121a; --hover:#1a1a2e;
+  --border:#1e1e30; --border-h:#2a2a44;
+  --text:#e4e4ed; --sec:#8888a0; --muted:#55556a;
+  --accent:#6c5ce7; --accent-h:#7c6cf7; --accent-dim:rgba(108,92,231,0.12);
+  --green:#00b894; --red:#e17055; --orange:#fdcb6e; --blue:#74b9ff; --purple:#a29bfe;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+}
+
+.screen { display:none; min-height:100vh; padding:32px 20px; max-width:860px; margin:0 auto; }
+.screen.active { display:block; }
+
+/* FadeIn */
+.fi { opacity:0; transform:translateY(8px); transition: opacity .3s var(--ease-out), transform .3s var(--ease-out); }
+.fi.show { opacity:1; transform:translateY(0); }
+
+/* Search */
+.search-box { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 16px; margin-bottom:16px; }
+.search-box input { background:none; border:none; outline:none; color:var(--text); font-size:14px; width:100%; }
+
+/* Filter pills */
+.pills { display:flex; gap:5px; flex-wrap:wrap; }
+.pill { padding:5px 12px; border-radius:18px; font-size:12px; font-weight:500; border:none; transition:all .16s var(--ease-out); }
+.pill.on { background:var(--accent); color:#fff; }
+.pill.off { background:var(--card); color:var(--sec); }
+.sort-pill { padding:4px 9px; border-radius:7px; font-size:11px; background:transparent; transition:all .16s var(--ease-out); }
+.sort-pill.on { border:1px solid var(--accent); color:var(--accent); }
+.sort-pill.off { border:1px solid var(--border); color:var(--muted); }
+
+/* Topic card */
+.topic-card { width:100%; text-align:left; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 20px; transition:all .2s var(--ease-out); display:flex; gap:16px; margin-bottom:10px; }
+.topic-card:hover { border-color:var(--border-h); transform:translateY(-1px); }
+.topic-card:active { transform:scale(0.97); }
+.tc-icon { width:40px; height:40px; border-radius:10px; background:var(--accent-dim); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; }
+.tc-cat { font-size:11px; color:var(--muted); }
+.tc-heat { display:flex; align-items:center; gap:4px; font-size:11px; font-weight:600; }
+.tc-title { font-size:15px; font-weight:700; color:var(--text); line-height:1.35; margin:4px 0 6px; letter-spacing:-0.01em; }
+.tc-desc { font-size:12px; color:var(--sec); line-height:1.5; margin-bottom:10px; }
+.tag { padding:2px 7px; border-radius:5px; font-size:10px; background:rgba(108,92,231,0.08); color:var(--purple); margin-right:4px; display:inline-block; }
+.agent-dot { width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px; border:2px solid var(--card); margin-left:-5px; }
+.agent-dot:first-child { margin-left:0; }
+
+/* Pipeline */
+.pipe-step { display:flex; gap:16px; margin-bottom:24px; position:relative; padding-left:32px; }
+.pipe-line { position:absolute; left:11px; top:0; bottom:0; width:2px; background:var(--border); }
+.pipe-dot { position:absolute; left:2px; top:4px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; transition:all .3s var(--ease-out); font-size:11px; }
+.pipe-dot.done { background:var(--accent); border:2px solid var(--accent); color:#fff; }
+.pipe-dot.active { background:rgba(108,92,231,0.27); border:2px solid var(--accent); }
+.pipe-dot.pending { background:var(--card); border:2px solid var(--border); }
+.pipe-label { font-size:13px; font-weight:600; }
+.pipe-desc { font-size:12px; color:var(--sec); }
+.pipe-detail { margin-top:10px; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border); font-size:11px; color:var(--muted); font-family:monospace; line-height:1.7; }
+
+/* Arena */
+.round-tabs { display:flex; gap:6px; padding:12px 0; border-bottom:1px solid var(--border); }
+.round-tab { flex:1; padding:8px 0; border-radius:8px; font-size:11px; font-weight:600; border:1px solid transparent; background:transparent; color:var(--muted); transition:all .16s var(--ease-out); }
+.round-tab.on { background:var(--accent-dim); color:var(--accent); border-color:rgba(108,92,231,0.2); }
+.msg { margin-bottom:14px; padding:16px; background:var(--card); border-radius:12px; border:1px solid var(--border); border-left:3px solid var(--accent); }
+.msg-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.msg-avatar { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.msg-name { font-size:12px; font-weight:700; color:var(--text); }
+.msg-style { font-size:10px; }
+.stance-badge { padding:2px 8px; border-radius:16px; font-size:10px; font-weight:600; }
+.msg-text { font-size:13px; color:var(--text); line-height:1.7; }
+
+/* Typing indicator */
+.typing { display:flex; align-items:center; gap:6px; padding:10px 16px; color:var(--muted); font-size:12px; }
+.typing-dots { display:flex; gap:2px; }
+.typing-dots span { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:pulse 1s infinite; }
+.typing-dots span:nth-child(2) { animation-delay:.15s; }
+.typing-dots span:nth-child(3) { animation-delay:.3s; }
+@keyframes pulse { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+
+/* Report */
+.insight-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.insight-icon { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+.insight-title { font-size:12px; font-weight:700; color:var(--text); }
+.insight-text { font-size:12px; color:var(--sec); line-height:1.6; margin-top:8px; }
+.chart-box { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.cross-row { display:flex; align-items:center; gap:10px; padding:8px 0; flex-wrap:wrap; font-size:11px; }
+.arch-tag { padding:6px 10px; background:var(--card); border-radius:8px; font-size:10px; display:inline-block; margin:3px; }
+
+/* Buttons */
+.btn-primary { padding:10px 24px; border-radius:10px; font-size:13px; font-weight:600; background:var(--accent); color:#fff; border:none; transition:transform .16s var(--ease-out); }
+.btn-primary:active { transform:scale(0.97); }
+.btn-back { display:flex; align-items:center; gap:4px; color:var(--sec); background:none; border:none; font-size:13px; margin-bottom:20px; }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media(max-width:600px) { .grid-2 { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: TOPIC HUB ═══ -->
+<div id="s-topics" class="screen active">
+  <div class="fi" style="text-align:center;margin-bottom:32px">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px">
+      <span style="font-size:26px">✨</span>
+      <h1 style="font-size:28px;font-weight:800;letter-spacing:-0.03em">Superintell Arena</h1>
+    </div>
+    <p style="color:var(--sec);font-size:14px">基于 MiroFish + OASIS 的跨学科辩证沙盒</p>
+    <div style="display:flex;justify-content:center;gap:16px;margin-top:10px">
+      <span style="font-size:11px;color:var(--muted)">🗄 Zep GraphRAG</span>
+      <span style="font-size:11px;color:var(--muted)">⚡ OASIS 引擎</span>
+      <span style="font-size:11px;color:var(--muted)">🔀 MiroFish 管线</span>
+    </div>
+  </div>
+  <div class="search-box fi">
+    <span style="color:var(--muted)">🔍</span>
+    <input id="topic-search" placeholder="搜索议题、关键词、学科...">
+  </div>
+  <div class="fi" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <div id="cat-pills" class="pills"></div>
+    <div id="sort-pills" style="display:flex;gap:5px;align-items:center"><span style="font-size:11px;color:var(--muted)">🔽</span></div>
+  </div>
+  <div id="topic-list"></div>
+</div>
+
+<!-- ═══ SCREEN 2: PIPELINE ═══ -->
+<div id="s-pipeline" class="screen">
+  <button class="btn-back" onclick="go('topics')">← 返回议题</button>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:28px">
+    <span style="font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.06em">MiroFish 管线启动</span>
+    <h2 id="pipe-title" style="font-size:20px;font-weight:800;margin-top:6px;letter-spacing:-0.02em"></h2>
+  </div>
+  <div id="pipe-steps" style="position:relative">
+    <div class="pipe-line"></div>
+  </div>
+  <div id="pipe-cta" style="text-align:center;margin-top:20px;display:none">
+    <button class="btn-primary" onclick="goArena()">▶ 进入辩论 Arena</button>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: ARENA ═══ -->
+<div id="s-arena" class="screen" style="padding-top:0">
+  <div style="padding:16px 0 10px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <button class="btn-back" style="margin:0" onclick="go('pipeline')">← 返回</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:var(--muted)">OASIS SimulationRunner</span>
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>
+      </div>
+    </div>
+    <h2 id="arena-title" style="font-size:17px;font-weight:800;margin-top:6px;letter-spacing:-0.02em"></h2>
+  </div>
+  <div id="round-tabs" class="round-tabs"></div>
+  <div id="arena-msgs" style="flex:1;overflow:auto;padding:14px 0"></div>
+  <div id="arena-bottom" style="padding:12px 0 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    <span id="arena-status" style="font-size:10px;color:var(--muted)"></span>
+    <button id="arena-next-btn" class="btn-primary" style="display:none;font-size:12px;padding:8px 20px"></button>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 4: REPORT ═══ -->
+<div id="s-report" class="screen">
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:16px;background:var(--accent-dim);margin-bottom:10px">
+      <span style="font-size:13px">📊</span>
+      <span style="font-size:11px;color:var(--accent);font-weight:600">ReportAgent 输出</span>
+    </div>
+    <h1 id="report-title" style="font-size:22px;font-weight:800;letter-spacing:-0.02em"></h1>
+    <p id="report-sub" style="font-size:12px;color:var(--sec);margin-top:4px"></p>
+  </div>
+  <div id="report-insights" class="grid-2" style="margin-bottom:24px"></div>
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="chart-box">
+      <h3 style="font-size:12px;font-weight:700;margin-bottom:10px">多维共识分析</h3>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px"><span style="color:var(--accent)">■</span> 乐观派 &nbsp; <span style="color:var(--green)">■</span> 审慎派</div>
+      <canvas id="radarChart" style="max-height:220px"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3 style="font-size:12px;font-weight:700;margin-bottom:10px">立场光谱 (反对 ← → 支持)</h3>
+      <canvas id="barChart" style="max-height:220px"></canvas>
+    </div>
+  </div>
+  <div id="report-cross" class="chart-box" style="margin-bottom:24px"></div>
+  <div id="report-arch" style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:24px"></div>
+  <div style="text-align:center;padding-bottom:40px">
+    <button class="btn-primary" onclick="go('topics');currentTopic=null">🔄 新辩论</button>
+  </div>
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────
+const AGENTS = {
+  musk:{name:"Elon Musk",title:"Tesla / SpaceX / xAI",emoji:"🚀",color:"#e17055",style:"第一性原理 · 物理学思维",models:["第一性原理分解","物理学类比","指数思维"],sources:["书籍: 各类物理/工程文献","X: @elonmusk"]},
+  thiel:{name:"Peter Thiel",title:"Founders Fund / Palantir",emoji:"♟️",color:"#6c5ce7",style:"逆向思维 · 垄断理论",models:["从0到1","竞争是输家的游戏"],sources:["书籍: Zero to One","斯坦福CS183讲座"]},
+  altman:{name:"Sam Altman",title:"OpenAI CEO",emoji:"🧠",color:"#00b894",style:"AI乐观主义 · 规模法则",models:["规模定律","AGI时间线","算力即权力"],sources:["博客: blog.samaltman.com","X: @sama"]},
+  huang:{name:"Jensen Huang",title:"NVIDIA CEO",emoji:"⚡",color:"#74b9ff",style:"加速计算 · 基础设施思维",models:["加速一切","平台思维"],sources:["NVIDIA GTC 演讲","财报电话会议"]},
+  munger:{name:"Charlie Munger",title:"伯克希尔副主席",emoji:"📚",color:"#fdcb6e",style:"多元思维模型 · 逆向思维",models:["多元思维模型","逆向思考","能力圈"],sources:["书籍: 穷查理宝典","伯克希尔股东大会"]},
+  dalio:{name:"Ray Dalio",title:"桥水基金创始人",emoji:"🌊",color:"#a29bfe",style:"原则驱动 · 宏观周期",models:["债务周期","极度透明","可信度加权"],sources:["书籍: Principles","LinkedIn"]},
+  taleb:{name:"Nassim Taleb",title:"《反脆弱》作者",emoji:"🦢",color:"#e17055",style:"反脆弱 · 肥尾分布",models:["反脆弱","黑天鹅","林迪效应","杠铃策略"],sources:["书籍: Incerto系列","X: @nntaleb"]},
+  buffett:{name:"Warren Buffett",title:"伯克希尔 CEO",emoji:"🎯",color:"#00b894",style:"价值投资 · 能力圈",models:["能力圈","护城河","安全边际"],sources:["伯克希尔年度股东信","CNBC访谈"]},
+  andreessen:{name:"Marc Andreessen",title:"a16z 联合创始人",emoji:"💻",color:"#fdcb6e",style:"技术乐观主义 · 平台思维",models:["软件吞噬世界","技术乐观主义"],sources:["pmarca.substack.com","a16z播客"]},
+  naval:{name:"Naval Ravikant",title:"AngelList 创始人",emoji:"🧘",color:"#74b9ff",style:"杠杆理论 · 特定知识",models:["特定知识","四种杠杆","复利判断力"],sources:["The Almanack of Naval","Naval Podcast"]},
+};
+
+const TOPICS = [
+  {id:"t1",title:"AI 会取代 90% 的知识工作吗？",desc:"当AI在编程、写作、分析等领域逼近人类水平，传统知识工作者的价值何在？",cat:"AI & 科技",icon:"🧠",heat:97,discs:["技术","经济","哲学","劳动"],agents:["altman","musk","munger","taleb","naval","andreessen"]},
+  {id:"t2",title:"下一个万亿美元市场在哪里？",desc:"移动互联网、云计算、AI之后，哪个领域将产生下一波万亿级价值？",cat:"投资 & 商业",icon:"📈",heat:92,discs:["投资","技术","产业","消费"],agents:["thiel","huang","andreessen","buffett","dalio","musk"]},
+  {id:"t3",title:"比特币会成为全球储备资产吗？",desc:"美元霸权松动、去美元化加速，比特币是新储备资产还是投机工具？",cat:"投资 & 商业",icon:"💰",heat:85,discs:["货币","地缘","技术","心理学"],agents:["taleb","dalio","thiel","buffett","naval","andreessen"]},
+  {id:"t4",title:"中美科技脱钩的终局是什么？",desc:"芯片禁令、AI管控、数据主权——两大生态加速分离的终局。",cat:"地缘 & 政治",icon:"🌍",heat:88,discs:["地缘","技术","供应链","投资"],agents:["huang","thiel","dalio","munger","musk","andreessen"]},
+  {id:"t5",title:"注意力经济的崩溃点在哪？",desc:"短视频和AI推荐正在重塑人类认知结构，是否存在不可逆的崩溃点？",cat:"社会 & 文化",icon:"👁",heat:80,discs:["心理学","商业","文化","技术"],agents:["munger","naval","taleb","altman","thiel","andreessen"]},
+  {id:"t6",title:"AGI 到来后教育如何重构？",desc:"如果AI可以瞬间获取所有知识并推理，教育的目的是什么？",cat:"AI & 科技",icon:"🎓",heat:83,discs:["教育","AI","哲学","经济"],agents:["altman","naval","munger","musk","thiel","taleb"]},
+  {id:"t7",title:"全球供应链的新格局",desc:"近岸外包、友岸外包、自动化——制造业和贸易体系走向何方？",cat:"投资 & 商业",icon:"📦",heat:75,discs:["供应链","地缘","制造","投资"],agents:["buffett","dalio","huang","musk","munger","andreessen"]},
+  {id:"t8",title:"人类寿命延长到150岁意味着什么？",desc:"长寿技术加速突破，退休、婚姻、职业、投资结构的根本性变化。",cat:"社会 & 文化",icon:"⏱",heat:78,discs:["生物","经济","社会","伦理"],agents:["thiel","taleb","buffett","naval","dalio","munger"]},
+];
+
+const CATS = ["全部","AI & 科技","投资 & 商业","地缘 & 政治","社会 & 文化"];
+const SORTS = ["热度","学科交叉度","争议度"];
+
+const DEBATE_DATA = {
+  t1: [
+    {phase:"开局立论",label:"Round 1",desc:"每位思想家陈述初始立场",responses:{
+      altman:{stance:"pro",text:"AI 不会取代 90% 的知识工作——它会重新定义 100% 的知识工作。我们在 OpenAI 看到的模式是：AI 成为超级工具后，人的判断力、品味和创造力变成了最稀缺的资源。规模定律告诉我们，AI 的能力提升是可预测的——但人类如何利用这种能力是不可预测的。真正的问题不是'AI 会取代谁'，而是'谁能最快学会与 AI 协作'。"},
+      musk:{stance:"pro",text:"从第一性原理看：知识工作的本质是信息处理+决策。AI 在信息处理维度已经远超人类。但决策需要理解物理现实和人类需求，这是目前 AI 做不到的。大约 60-70% 的 routine 部分会被自动化，但人类会向上迁移。关键变量是时间线：这可能在 5 年内发生，而不是 20 年。"},
+      munger:{stance:"contra",text:"我想用逆向思维来看这个问题：与其问 AI 能取代什么，不如问什么是 AI 绝对取代不了的。答案很清楚——需要跨学科判断力的工作。技术乐观派犯了锚定效应。他们锚定在当前 AI 的进步速度上做线性外推，但技术进步遇到瓶颈时会停滞。更重要的是：当所有人都依赖 AI 时，能独立思考的人反而变得极其珍贵。"},
+      taleb:{stance:"contra",text:"这整个问题的框架就是错误的！'取代90%'——这是高斯思维陷阱。现实是肥尾分布的：AI 可能取代 99% 的平庸知识工作，但在真正关键的 1% 上完全失败。而那 1% 恰恰产生最大价值。更致命的是：大规模依赖 AI 的系统是极其脆弱的。一个 AI 的错误会在整个系统中级联放大。反脆弱的策略是：保留人类判断力作为对冲。"},
+      naval:{stance:"neutral",text:"用杠杆理论来解构：AI 是代码杠杆的终极进化。但杠杆只放大方向，不创造方向。真正稀缺的是判断力——知道做什么的能力。AI 让执行力成本趋近于零，意味着拥有独特判断力的人价值指数级增长。90% 的人可能需要转型，但不是被'取代'，是工作内容彻底改变。"},
+      andreessen:{stance:"pro",text:"软件吞噬世界，AI 吞噬软件。每一次自动化浪潮都创造了比消灭的更多工作。ATM没有消灭银行柜员——银行开了更多网点。AI 会做同样的事，但更快更大规模。我们 a16z 的投资主题之一就是'AI-native companies'——完全围绕 AI 能力设计的新型组织。"},
+    }},
+    {phase:"交叉质疑",label:"Round 2",desc:"Agent之间直接挑战彼此的前提和假设",responses:{
+      taleb:{stance:"contra",text:"Altman，你说'品味和创造力'成为稀缺资源。但你忽略了切身利害（Skin in the Game）。AI 没有后果承担能力。当 AI 给出错误的医疗/投资建议，谁来承担后果？你们 OpenAI 吗？2008 年的金融模型也'非常聪明'。"},
+      altman:{stance:"pro",text:"Taleb 的反脆弱框架在这里是对的，但结论是错的。我们需要防范系统性风险——这正是 AI 安全研究重要的原因。但答案不是拒绝 AI，而是建立更好的安全机制。保留低效的人类工作才是真正的系统性风险——在竞争中落后的经济体会怎样？"},
+      munger:{stance:"contra",text:"Andreessen 用 ATM 的类比有缺陷。ATM 自动化的是一个简单重复动作。但 AI 正在自动化认知本身。这是质的不同。就像说'马车夫后来都成了出租车司机'——这个转型花了整整一代人。现在的变化速度是当时的十倍。"},
+      musk:{stance:"pro",text:"Munger 说得对，速度是核心变量。但更深层的物理学类比：相变。水从 99°C 到 100°C 不只是温度变化——它变成了蒸汽。AI 能力正在接近一个相变点。在相变之前的所有线性分析都是无意义的。Taleb 的反脆弱框架应该用来指导如何建设后 AI 时代，而不是论证我们应该抗拒。"},
+      naval:{stance:"neutral",text:"这场辩论暴露了根本分歧：乐观派讨论'终态是什么'，审慎派讨论'转型路径有多痛苦'。两边都对。终态大概率是人类+AI 共生，但转型路径可能极其残酷。真正的问题是：能否设计一个足够反脆弱的社会安全网？"},
+      andreessen:{stance:"pro",text:"Munger 的马车夫类比恰好证明了我的观点。拒绝转型的痛苦更大。每一个阻止技术进步的社会最终都被拥抱技术的社会超越。我们需要的不是减速，而是加速+再分配。"},
+    }},
+    {phase:"辩证综合",label:"Round 3",desc:"知识图谱记忆回写后，Agent产出跨框架综合洞察",responses:{
+      naval:{stance:"synthesis",text:"【跨领域综合洞察】AI 取代知识工作的真正瓶颈不是技术，而是信任架构。Taleb 的'切身利害'指出了信任的基础——后果承担。Buffett 的'能力圈'指出了信任的边界。AI 时代的核心制度创新可能是一种新的'信任协议'——像区块链验证交易一样验证 AI 决策。谁能建立这个信任层，谁就抓住了下一个万亿市场。"},
+      altman:{stance:"synthesis",text:"【预测模型】综合所有人观点，我修正判断：不是90%的知识工作被取代，而是知识工作价值链被彻底重组。底层执行→AI自动化。中层分析→人机协作（需要反脆弱设计）。顶层判断→人类不可取代，且价值暴涨。时间线：3年内开始，10年内完成主要转型。"},
+      munger:{stance:"synthesis",text:"【多元模型交叉验证】心理学视角——两派都有锚定偏见。生物学视角——进化花数十万年优化认知，AI用数十年接近，说明认知'解空间'比我们以为的更小。物理学视角——Musk的相变类比是最好框架。我修正立场：AI冲击比预期更快更深，但人类适应能力也比悲观者预期更强。关键是建立缓冲。"},
+      taleb:{stance:"synthesis",text:"【反脆弱处方】杠铃策略：一端全力拥抱AI加速（Andreessen），另一端保留完全独立于AI的人类判断力（作为保险）。中间的温和'人机协作'在黑天鹅事件中最脆弱。Naval 的'信任协议'本质上是为 AI 系统建立'切身利害'机制。"},
+      musk:{stance:"synthesis",text:"【第一性原理总结】Naval 指出的信任架构问题翻译成工程语言：我们需要一个'AI决策的可验证性层'。Munger 的'进化用数十万年优化认知'极其重要——意味着人类认知是被深度优化的，AI复制了认知的输出但可能没有复制其鲁棒性。这是值得深挖的研究方向。"},
+      andreessen:{stance:"synthesis",text:"【构建者视角】三个可构建的机会：① Naval 的'信任协议层'——平台级机会。② Taleb的杠铃策略在组织设计中的应用——'AI-native'效率部门+'human-only'判断部门。③ Munger的跨学科框架本身可以被AI增强——自动化多元模型检验系统。如果我今天投资，这三个方向各投一个公司。"},
+    }},
+  ],
+};
+
+// ─── STATE ─────────────────────────────────────────────────────────────
+let currentCat = "全部", currentSort = "热度", currentTopic = null;
+let currentRound = 0, revealCount = 0, isTyping = false, typingTimer = null;
+let radarChartInst = null, barChartInst = null;
+
+// ─── NAVIGATION ────────────────────────────────────────────────────────
+function go(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-'+screen).classList.add('active');
+  window.scrollTo(0,0);
+  if (screen === 'topics') renderTopics();
+  if (screen === 'report') renderReport();
+}
+
+// ─── FADE IN ───────────────────────────────────────────────────────────
+function fadeInAll(container) {
+  const els = container.querySelectorAll('.fi');
+  els.forEach((el, i) => {
+    setTimeout(() => el.classList.add('show'), 40 + i * 35);
+  });
+}
+
+// ─── TOPIC HUB ─────────────────────────────────────────────────────────
+function renderTopics() {
+  // Categories
+  const cp = document.getElementById('cat-pills');
+  cp.innerHTML = CATS.map(c =>
+    `<button class="pill ${c===currentCat?'on':'off'}" onclick="currentCat='${c}';renderTopics()">${c}</button>`
+  ).join('');
+  // Sort
+  const sp = document.getElementById('sort-pills');
+  sp.innerHTML = '<span style="font-size:11px;color:var(--muted)">🔽</span>' +
+    SORTS.map(s =>
+      `<button class="sort-pill ${s===currentSort?'on':'off'}" onclick="currentSort='${s}';renderTopics()">${s}</button>`
+    ).join('');
+  // Filter + sort topics
+  const q = (document.getElementById('topic-search').value||'').toLowerCase();
+  let ts = TOPICS.filter(t => currentCat==='全部' || t.cat===currentCat);
+  if (q) ts = ts.filter(t => t.title.includes(q)||t.desc.includes(q)||t.discs.some(d=>d.includes(q)));
+  if (currentSort==='热度') ts.sort((a,b)=>b.heat-a.heat);
+  if (currentSort==='学科交叉度') ts.sort((a,b)=>b.discs.length-a.discs.length);
+  if (currentSort==='争议度') ts.sort((a,b)=>b.agents.length-a.agents.length);
+
+  const list = document.getElementById('topic-list');
+  list.innerHTML = ts.map(t => {
+    const hc = t.heat>90?'var(--red)':t.heat>80?'var(--orange)':'var(--muted)';
+    const dots = t.agents.slice(0,4).map((aid,j) => {
+      const a = AGENTS[aid];
+      return `<span class="agent-dot" style="background:${a.color}">${a.emoji}</span>`;
+    }).join('') + (t.agents.length>4?`<span style="font-size:10px;color:var(--muted);margin-left:3px">+${t.agents.length-4}</span>`:'');
+    return `<button class="topic-card fi" onclick='selectTopic("${t.id}")'>
+      <div class="tc-icon">${t.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span class="tc-cat">${t.cat}</span>
+          <div class="tc-heat" style="color:${hc}">🔥 ${t.heat}</div>
+        </div>
+        <div class="tc-title">${t.title}</div>
+        <div class="tc-desc">${t.desc}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>${t.discs.map(d=>`<span class="tag">${d}</span>`).join('')}</div>
+          <div style="display:flex;align-items:center">${dots}</div>
+        </div>
+      </div>
+    </button>`;
+  }).join('');
+  fadeInAll(document.getElementById('s-topics'));
+}
+
+function selectTopic(id) {
+  currentTopic = TOPICS.find(t=>t.id===id);
+  go('pipeline');
+  runPipeline();
+}
+
+// ─── PIPELINE ──────────────────────────────────────────────────────────
+const PIPE_STEPS = [
+  {key:"ontology",label:"本体论构建",desc:"分析议题，提取辩论实体和关系类型",icon:"🗄",dur:1800},
+  {key:"graph",label:"知识图谱注入",desc:"将Agent知识源注入Zep GraphRAG",icon:"🔗",dur:2500},
+  {key:"profile",label:"Agent人设生成",desc:"从图谱节点生成深度辩论人设",icon:"👥",dur:2000},
+  {key:"config",label:"辩论参数配置",desc:"自动生成辩证结构和交互规则",icon:"⚙️",dur:1200},
+  {key:"ready",label:"沙盒就绪",desc:"OASIS引擎初始化完成",icon:"▶",dur:600},
+];
+
+function runPipeline() {
+  if (!currentTopic) return;
+  document.getElementById('pipe-title').textContent = currentTopic.title;
+  document.getElementById('pipe-cta').style.display = 'none';
+  const container = document.getElementById('pipe-steps');
+  const matched = currentTopic.agents.map(id=>AGENTS[id]);
+
+  container.innerHTML = '<div class="pipe-line"></div>' + PIPE_STEPS.map((s,i) => {
+    let detail = '';
+    if (i===0) detail = `<div class="pipe-detail" style="display:none" id="pd-${i}">→ 提取辩论实体类型: Technologist, Investor, Philosopher...<br>→ 关系类型: CHALLENGES, SUPPORTS, SYNTHESIZES_WITH...<br>→ 基于 MiroFish OntologyGenerator 自适应生成</div>`;
+    if (i===1) detail = `<div class="pipe-detail" style="display:none" id="pd-${i}">${matched.slice(0,3).map(a=>`→ 注入 ${a.name}: ${a.sources[0]}`).join('<br>')}<br>→ Zep GraphRAG 构建知识图谱中... (${matched.length*3} 个知识节点)</div>`;
+    if (i===2) detail = `<div style="display:none;margin-top:10px;display:flex;gap:6px;flex-wrap:wrap" id="pd-${i}">${matched.map(a=>`<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:${a.color}15;border-radius:8px;font-size:11px;color:${a.color}">${a.emoji} ${a.name}</span>`).join('')}</div>`;
+    if (i===3) detail = `<div class="pipe-detail" style="display:none" id="pd-${i}">→ 辩论结构: 3轮 (开局立论 → 交叉质疑 → 辩证综合)<br>→ 动作空间: ARGUE, CHALLENGE, CONCEDE, SYNTHESIZE, PREDICT<br>→ 记忆回写: 每轮结束后 ZepGraphMemoryUpdater 更新图谱</div>`;
+    return `<div class="pipe-step fi">
+      <div class="pipe-dot pending" id="dot-${i}"></div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span>${s.icon}</span>
+          <span class="pipe-label" id="pl-${i}" style="color:var(--muted)">${s.label}</span>
+          <span id="loader-${i}" style="display:none;font-size:11px">⟳</span>
+        </div>
+        <p class="pipe-desc">${s.desc}</p>
+        ${detail}
+      </div>
+    </div>`;
+  }).join('');
+
+  fadeInAll(container);
+
+  // Animate steps
+  let step = 0;
+  function nextStep() {
+    if (step >= PIPE_STEPS.length) {
+      document.getElementById('pipe-cta').style.display = '';
+      return;
+    }
+    // Set previous as done
+    if (step > 0) {
+      const pd = document.getElementById('dot-'+(step-1));
+      pd.className = 'pipe-dot done'; pd.textContent = '✓';
+      const pl = document.getElementById('pl-'+(step-1));
+      pl.style.color = 'var(--text)';
+      document.getElementById('loader-'+(step-1)).style.display = 'none';
+      const prevDetail = document.getElementById('pd-'+(step-1));
+      if (prevDetail) prevDetail.style.display = 'none';
+    }
+    // Set current as active
+    const dot = document.getElementById('dot-'+step);
+    dot.className = 'pipe-dot active'; dot.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite"></span>';
+    document.getElementById('pl-'+step).style.color = 'var(--text)';
+    document.getElementById('loader-'+step).style.display = 'inline';
+    const detail = document.getElementById('pd-'+step);
+    if (detail) detail.style.display = '';
+
+    step++;
+    setTimeout(nextStep, PIPE_STEPS[step-1].dur);
+  }
+  setTimeout(nextStep, 300);
+}
+
+function goArena() {
+  currentRound = 0;
+  go('arena');
+  renderArena();
+}
+
+// ─── ARENA ─────────────────────────────────────────────────────────────
+function renderArena() {
+  if (!currentTopic) return;
+  const rounds = DEBATE_DATA[currentTopic.id] || DEBATE_DATA.t1;
+  document.getElementById('arena-title').textContent = currentTopic.title;
+
+  // Tabs
+  document.getElementById('round-tabs').innerHTML = rounds.map((r,i) =>
+    `<button class="round-tab ${i===currentRound?'on':''}" onclick="if(!isTyping||${i}<=${currentRound}){currentRound=${i};renderArena()}">${r.label}<div style="font-size:10px;font-weight:400;margin-top:1px;opacity:.7">${r.phase}</div></button>`
+  ).join('');
+
+  const r = rounds[currentRound];
+  const keys = Object.keys(r.responses);
+  const msgBox = document.getElementById('arena-msgs');
+  msgBox.innerHTML = `<div style="text-align:center;margin-bottom:14px"><span style="font-size:11px;color:var(--muted);background:var(--card);padding:4px 12px;border-radius:20px">${r.desc}</span></div>`;
+
+  // Reveal messages one by one
+  revealCount = 0; isTyping = true;
+  clearInterval(typingTimer);
+
+  function revealNext() {
+    if (revealCount >= keys.length) {
+      isTyping = false;
+      updateArenaBottom();
+      return;
+    }
+    const aid = keys[revealCount];
+    const a = AGENTS[aid];
+    const resp = r.responses[aid];
+    const sc = resp.stance==='pro'?'var(--green)':resp.stance==='contra'?'var(--red)':resp.stance==='synthesis'?'var(--accent)':'var(--orange)';
+    const sl = resp.stance==='pro'?'支持':resp.stance==='contra'?'反对':resp.stance==='synthesis'?'综合':'中立';
+
+    // Remove typing indicator
+    const ti = msgBox.querySelector('.typing');
+    if (ti) ti.remove();
+
+    const div = document.createElement('div');
+    div.className = 'msg fi';
+    div.style.borderLeftColor = a.color;
+    div.innerHTML = `<div class="msg-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="msg-avatar" style="background:${a.color}22">${a.emoji}</div>
+        <div><div class="msg-name">${a.name}</div><div class="msg-style" style="color:${a.color}">${a.style}</div></div>
+      </div>
+      <span class="stance-badge" style="background:${sc}18;color:${sc}">${sl}</span>
+    </div>
+    <p class="msg-text">${resp.text}</p>`;
+    msgBox.appendChild(div);
+    setTimeout(() => div.classList.add('show'), 20);
+
+    revealCount++;
+    // Show typing for next
+    if (revealCount < keys.length) {
+      const nextA = AGENTS[keys[revealCount]];
+      const tip = document.createElement('div');
+      tip.className = 'typing';
+      tip.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>${nextA.name} 正在推理...<span style="font-size:10px;color:var(--muted);margin-left:auto">Zep Memory 检索中</span>`;
+      msgBox.appendChild(tip);
+    }
+    msgBox.scrollTop = msgBox.scrollHeight;
+    typingTimer = setTimeout(revealNext, 1100);
+  }
+
+  // Start with typing indicator
+  const firstA = AGENTS[keys[0]];
+  const tip = document.createElement('div');
+  tip.className = 'typing';
+  tip.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>${firstA.name} 正在推理...<span style="font-size:10px;color:var(--muted);margin-left:auto">Zep Memory 检索中</span>`;
+  msgBox.appendChild(tip);
+  typingTimer = setTimeout(revealNext, 800);
+
+  updateArenaBottom();
+}
+
+function updateArenaBottom() {
+  const rounds = DEBATE_DATA[currentTopic.id] || DEBATE_DATA.t1;
+  const agentCount = currentTopic.agents.length;
+  document.getElementById('arena-status').textContent = `Round ${currentRound+1}/${rounds.length} · ${agentCount} Agents · GraphRAG 实时回写`;
+  const btn = document.getElementById('arena-next-btn');
+  if (isTyping) { btn.style.display = 'none'; return; }
+  if (currentRound < rounds.length - 1) {
+    btn.style.display = ''; btn.textContent = rounds[currentRound+1].phase + ' ▸';
+    btn.onclick = () => { currentRound++; renderArena(); };
+  } else {
+    btn.style.display = ''; btn.textContent = '💡 ReportAgent 综合';
+    btn.onclick = () => go('report');
+  }
+}
+
+// ─── REPORT ────────────────────────────────────────────────────────────
+function renderReport() {
+  if (!currentTopic) return;
+  const matched = currentTopic.agents.map(id=>AGENTS[id]);
+  document.getElementById('report-title').textContent = currentTopic.title;
+  document.getElementById('report-sub').textContent = `${matched.length} 位思想家 · 3 轮辩证 · Zep InsightForge 深度检索`;
+
+  // Insights
+  const insights = [
+    {icon:"✨",color:"var(--accent)",title:"核心涌现洞察",text:"AI时代的核心制度创新是「信任协议层」— 像区块链验证交易一样验证AI决策。来自 Taleb 的'切身利害'与 Naval 的'杠杆理论'的跨框架碰撞。"},
+    {icon:"⚠️",color:"var(--orange)",title:"关键分歧",text:"乐观派关注终态（AI+人类共生），审慎派关注路径（转型速度超过适应速度）。两者都正确——真正的挑战是设计兼顾速度与安全的转型机制。"},
+    {icon:"🎯",color:"var(--green)",title:"可行动预测",text:"三个投资级机会：① 信任协议平台 ② AI-native + Human-only 双轨组织 ③ 自动化多元思维模型检验系统。时间窗口3-5年。"},
+    {icon:"🛡",color:"var(--red)",title:"反脆弱处方",text:"杠铃策略：一端全力AI加速，另一端保留完全独立于AI的人类判断力。中间的温和'人机协作'在黑天鹅事件中最脆弱。"},
+  ];
+  document.getElementById('report-insights').innerHTML = insights.map(ins =>
+    `<div class="insight-card fi">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <div class="insight-icon" style="background:${ins.color}18">${ins.icon}</div>
+        <span class="insight-title">${ins.title}</span>
+      </div>
+      <p class="insight-text">${ins.text}</p>
+    </div>`
+  ).join('');
+
+  // Cross collisions
+  const crosses = [
+    {from:"Taleb: 切身利害",to:"Naval: 信任协议",out:"→ AI决策可验证性层"},
+    {from:"Munger: 进化论视角",to:"Musk: 相变类比",out:"→ 认知鲁棒性研究"},
+    {from:"Andreessen: 构建者",to:"Taleb: 杠铃策略",out:"→ 双轨组织架构"},
+  ];
+  document.getElementById('report-cross').innerHTML = `<h3 style="font-size:13px;font-weight:700;margin-bottom:12px">⚡ 跨框架碰撞 → 涌现洞察</h3>` +
+    crosses.map((c,i) => `<div class="cross-row" style="${i>0?'border-top:1px solid var(--border)':''}">
+      <span style="color:var(--orange);font-weight:600;min-width:120px">${c.from}</span>
+      <span style="color:var(--muted)">→</span>
+      <span style="color:var(--blue);font-weight:600;min-width:120px">${c.to}</span>
+      <span style="color:var(--green);font-weight:700">${c.out}</span>
+    </div>`).join('');
+
+  // Architecture
+  const arch = [["MiroFish OntologyGenerator","本体论自动构建"],["Zep GraphRAG","知识图谱 + 记忆"],["OASIS SimulationRunner","多Agent辩论调度"],["ZepGraphMemoryUpdater","实时记忆回写"],["ReportAgent + InsightForge","深度分析报告"]];
+  document.getElementById('report-arch').innerHTML = `<h4 style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">Architecture Stack</h4>` +
+    arch.map(([k,v]) => `<span class="arch-tag"><span style="color:var(--accent);font-weight:600">${k}</span> <span style="color:var(--muted)">· ${v}</span></span>`).join('');
+
+  fadeInAll(document.getElementById('s-report'));
+
+  // Charts
+  setTimeout(() => renderCharts(matched), 100);
+}
+
+function renderCharts(matched) {
+  // Radar
+  if (radarChartInst) radarChartInst.destroy();
+  const rCtx = document.getElementById('radarChart');
+  radarChartInst = new Chart(rCtx, {
+    type: 'radar',
+    data: {
+      labels: ['技术可行性','经济影响','社会风险','时间紧迫性','伦理考量','共识程度'],
+      datasets: [
+        { label:'乐观派', data:[88,92,45,85,35,60], borderColor:'#6c5ce7', backgroundColor:'rgba(108,92,231,0.12)', borderWidth:2, pointRadius:3 },
+        { label:'审慎派', data:[65,78,82,50,75,60], borderColor:'#00b894', backgroundColor:'rgba(0,184,148,0.08)', borderWidth:2, pointRadius:3 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales: { r: { beginAtZero:true, max:100, ticks:{display:false,stepSize:25}, grid:{color:'#1e1e30'}, pointLabels:{color:'#8888a0',font:{size:9}}, angleLines:{color:'#1e1e30'} } },
+      plugins: { legend:{display:false} }
+    }
+  });
+
+  // Bar
+  if (barChartInst) barChartInst.destroy();
+  const stances = {altman:85,musk:70,andreessen:80,huang:65,naval:50,munger:30,taleb:20,buffett:35,thiel:55,dalio:40};
+  const bData = matched.map(a => ({name:a.name.split(' ')[0], val:stances[currentTopic.agents.find(id=>AGENTS[id]===a)]||50, col:a.color}));
+  const bCtx = document.getElementById('barChart');
+  barChartInst = new Chart(bCtx, {
+    type: 'bar',
+    data: {
+      labels: bData.map(d=>d.name),
+      datasets: [{ data:bData.map(d=>d.val), backgroundColor:bData.map(d=>d.col+'aa'), borderRadius:4, barThickness:14 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      scales: { x:{min:0,max:100,ticks:{color:'#55556a',font:{size:9}},grid:{color:'#1e1e30'}}, y:{ticks:{color:'#8888a0',font:{size:10}},grid:{display:false}} },
+      plugins: { legend:{display:false} }
+    }
+  });
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────
+document.getElementById('topic-search').addEventListener('input', renderTopics);
+renderTopics();
+// Initial fade-in
+setTimeout(() => fadeInAll(document.getElementById('s-topics')), 50);
+</script>
+</body>
+</html>

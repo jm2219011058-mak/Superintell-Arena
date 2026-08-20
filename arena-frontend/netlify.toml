@@ -1,0 +1,21 @@
+# Superintell Arena frontend - Netlify config
+# Deploys the Vite build. The Flask backend is hosted separately;
+# point VITE_API_BASE_URL at it.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 7 requires Node 20.19+ / 22.12+
+  NODE_VERSION = "22"
+  # Set VITE_API_BASE_URL in Netlify (Site configuration -> Environment variables)
+  # to the deployed backend origin, e.g. https://arena-backend.onrender.com
+  # Leave unset for local dev (falls back to http://localhost:5001).
+  # NEVER put LLM/Zep API keys in VITE_* vars - they are baked into public JS.
+
+# vue-router history mode: deep links must serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
