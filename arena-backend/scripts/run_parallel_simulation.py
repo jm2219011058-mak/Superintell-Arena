@@ -1079,7 +1079,17 @@ def get_active_agents_for_round(
         
         if random.random() < activity_level:
             candidates.append(agent_id)
-    
+
+    # 辩论面板模式：小规模对局（<=12 方）每轮全员出场。
+    # 概率作息机制只适用于大规模社会模拟，用在辩论上会让
+    # 辩手在"深夜时段"集体沉默，整场 0 动作
+    if agent_configs and len(agent_configs) <= 12:
+        candidates = [cfg.get("agent_id", 0) for cfg in agent_configs]
+        target_count = len(candidates)
+    elif not candidates:
+        # 兜底：作息门控筛空时全员候选，避免空轮
+        candidates = [cfg.get("agent_id", 0) for cfg in agent_configs]
+
     selected_ids = random.sample(
         candidates, 
         min(target_count, len(candidates))

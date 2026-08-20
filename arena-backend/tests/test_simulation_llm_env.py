@@ -51,6 +51,30 @@ def test_explicit_base_url_is_respected(monkeypatch):
     assert os.environ.get("OPENAI_API_BASE_URL") == "http://my-proxy.local/v1"
 
 
+class _StubAgentGraph:
+    def get_agent(self, agent_id):
+        return f"agent-{agent_id}"
+
+
+class _StubEnv:
+    agent_graph = _StubAgentGraph()
+
+
+def test_small_debate_panel_activates_all_agents_every_round(monkeypatch):
+    """回归：<=12 方的辩论局必须全员每轮出场。
+    修复前作息门控会让辩手在深夜时段集体沉默（sim_103dd7d8df64 十轮 1 动作）。"""
+    mod = _load_script("run_parallel_simulation")
+    config = {
+        "time_config": {},
+        "agent_configs": [
+            {"agent_id": i, "active_hours": [15], "activity_level": 0.0}
+            for i in range(3)
+        ],
+    }
+    active = mod.get_active_agents_for_round(_StubEnv(), config, current_hour=2, round_num=0)
+    assert sorted(agent_id for agent_id, _ in active) == [0, 1, 2]
+
+
 def test_non_anthropic_key_keeps_default(monkeypatch):
     mod = _load_script("run_parallel_simulation")
 
