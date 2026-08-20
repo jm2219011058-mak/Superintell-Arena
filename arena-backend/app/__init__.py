@@ -36,7 +36,7 @@ def create_app(config_class=Config):
     
     if should_log_startup:
         logger.info("=" * 50)
-        logger.info("MiroFish Backend 启动中...")
+        logger.info("Mega X Backend 启动中...")
         logger.info("=" * 50)
     
     # 启用CORS
@@ -72,10 +72,10 @@ def create_app(config_class=Config):
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'MiroFish Backend'}
+        return {'status': 'ok', 'service': 'Mega X Backend'}
     
     if should_log_startup:
-        logger.info("MiroFish Backend 启动完成")
+        logger.info("Mega X Backend 启动完成")
     
     return app
 
