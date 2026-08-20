@@ -448,7 +448,12 @@ class RedditSimulationRunner:
         # 如果 .env 中没有，则使用 config 作为备用
         if not llm_model:
             llm_model = self.config.get("llm_model", "gpt-4o-mini")
-        
+
+        # Anthropic key 必须走其 OpenAI 兼容端点：camel 只会用 OpenAI 协议发请求，
+        # 未配置 base_url 时会打到 api.openai.com，导致所有智能体动作 401
+        if not llm_base_url and llm_api_key.startswith("sk-ant-"):
+            llm_base_url = "https://api.anthropic.com/v1"
+
         # 设置 camel-ai 所需的环境变量
         if llm_api_key:
             os.environ["OPENAI_API_KEY"] = llm_api_key
