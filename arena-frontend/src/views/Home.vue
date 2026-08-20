@@ -5,7 +5,7 @@
       <div class="nav-brand">SUPERINTELL ARENA</div>
       <div class="nav-links">
         <LanguageSwitcher />
-        <span class="powered-by">Powered by MiroFish + OASIS</span>
+        <span class="powered-by">Powered by Mega X + OASIS</span>
       </div>
     </nav>
 
@@ -38,11 +38,6 @@
         </div>
         
         <div class="hero-right">
-          <!-- Logo 区域 -->
-          <div class="logo-container">
-            <img src="../assets/logo/MiroFish_logo_left.jpeg" alt="Superintell Arena" class="hero-logo" />
-          </div>
-          
           <button class="scroll-down-btn" @click="scrollToBottom">
             ↓
           </button>
@@ -122,42 +117,83 @@
         <!-- 右栏：交互控制台 -->
         <div class="right-panel">
           <div class="console-box">
-            <!-- 上传区域 -->
+            <!-- 上传区域：知识库种子 -->
             <div class="console-section">
               <div class="console-header">
                 <span class="console-label">{{ $t('home.realitySeed') }}</span>
                 <span class="console-meta">{{ $t('home.supportedFormats') }}</span>
               </div>
-              
-              <div 
+
+              <div
                 class="upload-zone"
-                :class="{ 'drag-over': isDragOver, 'has-files': files.length > 0 }"
-                @dragover.prevent="handleDragOver"
+                :class="{ 'drag-over': isDragOver === 'seed', 'has-files': files.length > 0 }"
+                @dragover.prevent="handleDragOver('seed')"
                 @dragleave.prevent="handleDragLeave"
-                @drop.prevent="handleDrop"
-                @click="triggerFileInput"
+                @drop.prevent="handleDrop($event, 'seed')"
+                @click="triggerFileInput('seed')"
               >
                 <input
                   ref="fileInput"
                   type="file"
                   multiple
                   accept=".pdf,.md,.txt"
-                  @change="handleFileSelect"
+                  @change="handleFileSelect($event, 'seed')"
                   style="display: none"
                   :disabled="loading"
                 />
-                
+
                 <div v-if="files.length === 0" class="upload-placeholder">
                   <div class="upload-icon">↑</div>
                   <div class="upload-title">{{ $t('home.dragToUpload') }}</div>
                   <div class="upload-hint">{{ $t('home.orBrowse') }}</div>
                 </div>
-                
+
                 <div v-else class="file-list">
                   <div v-for="(file, index) in files" :key="index" class="file-item">
                     <span class="file-icon">📄</span>
                     <span class="file-name">{{ file.name }}</span>
-                    <button @click.stop="removeFile(index)" class="remove-btn">×</button>
+                    <button @click.stop="removeFile(index, 'seed')" class="remove-btn">×</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 上传区域：思想家记忆注入 -->
+            <div class="console-section">
+              <div class="console-header">
+                <span class="console-label">{{ $t('home.thinkerMemory') }}</span>
+                <span class="console-meta">{{ $t('home.thinkerMemoryHint') }}</span>
+              </div>
+
+              <div
+                class="upload-zone"
+                :class="{ 'drag-over': isDragOver === 'thinker', 'has-files': thinkerFiles.length > 0 }"
+                @dragover.prevent="handleDragOver('thinker')"
+                @dragleave.prevent="handleDragLeave"
+                @drop.prevent="handleDrop($event, 'thinker')"
+                @click="triggerFileInput('thinker')"
+              >
+                <input
+                  ref="thinkerFileInput"
+                  type="file"
+                  multiple
+                  accept=".pdf,.md,.txt"
+                  @change="handleFileSelect($event, 'thinker')"
+                  style="display: none"
+                  :disabled="loading"
+                />
+
+                <div v-if="thinkerFiles.length === 0" class="upload-placeholder">
+                  <div class="upload-icon">↑</div>
+                  <div class="upload-title">{{ $t('home.dragToUpload') }}</div>
+                  <div class="upload-hint">{{ $t('home.orBrowse') }}</div>
+                </div>
+
+                <div v-else class="file-list">
+                  <div v-for="(file, index) in thinkerFiles" :key="index" class="file-item">
+                    <span class="file-icon">🧠</span>
+                    <span class="file-name">{{ file.name }}</span>
+                    <button @click.stop="removeFile(index, 'thinker')" class="remove-btn">×</button>
                   </div>
                 </div>
               </div>
@@ -220,66 +256,72 @@ const formData = ref({
   simulationRequirement: ''
 })
 
-// 文件列表
+// 文件列表：知识库种子 / 思想家记忆（两个独立上传入口）
 const files = ref([])
+const thinkerFiles = ref([])
 
 // 状态
 const loading = ref(false)
 const error = ref('')
-const isDragOver = ref(false)
+const isDragOver = ref(null) // 'seed' | 'thinker' | null
 
 // 文件输入引用
 const fileInput = ref(null)
+const thinkerFileInput = ref(null)
 
-// 计算属性:是否可以提交
+const listFor = (kind) => (kind === 'thinker' ? thinkerFiles : files)
+const inputFor = (kind) => (kind === 'thinker' ? thinkerFileInput : fileInput)
+
+// 计算属性:是否可以提交（知识库种子必填，思想家记忆可选）
 const canSubmit = computed(() => {
   return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
 })
 
 // 触发文件选择
-const triggerFileInput = () => {
+const triggerFileInput = (kind) => {
   if (!loading.value) {
-    fileInput.value?.click()
+    inputFor(kind).value?.click()
   }
 }
 
 // 处理文件选择
-const handleFileSelect = (event) => {
+const handleFileSelect = (event, kind) => {
   const selectedFiles = Array.from(event.target.files)
-  addFiles(selectedFiles)
+  addFiles(selectedFiles, kind)
+  event.target.value = ''
 }
 
 // 处理拖拽相关
-const handleDragOver = (e) => {
+const handleDragOver = (kind) => {
   if (!loading.value) {
-    isDragOver.value = true
+    isDragOver.value = kind
   }
 }
 
-const handleDragLeave = (e) => {
-  isDragOver.value = false
+const handleDragLeave = () => {
+  isDragOver.value = null
 }
 
-const handleDrop = (e) => {
-  isDragOver.value = false
+const handleDrop = (e, kind) => {
+  isDragOver.value = null
   if (loading.value) return
-  
+
   const droppedFiles = Array.from(e.dataTransfer.files)
-  addFiles(droppedFiles)
+  addFiles(droppedFiles, kind)
 }
 
 // 添加文件
-const addFiles = (newFiles) => {
+const addFiles = (newFiles, kind) => {
   const validFiles = newFiles.filter(file => {
     const ext = file.name.split('.').pop().toLowerCase()
     return ['pdf', 'md', 'txt'].includes(ext)
   })
-  files.value.push(...validFiles)
+  listFor(kind).value.push(...validFiles)
 }
 
 // 移除文件
-const removeFile = (index) => {
-  files.value.splice(index, 1)
+const removeFile = (index, kind) => {
+  listFor(kind).value.splice(index, 1)
 }
 
 // 滚动到底部
@@ -296,7 +338,7 @@ const startSimulation = () => {
   
   // 存储待上传的数据
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
+    setPendingUpload(files.value, formData.value.simulationRequirement, thinkerFiles.value)
     
     // 立即跳转到Process页面（使用特殊标识表示新建项目）
     router.push({
@@ -504,18 +546,6 @@ const startSimulation = () => {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
-}
-
-.logo-container {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-  padding-right: 40px;
-}
-
-.hero-logo {
-  max-width: 500px; /* 调整logo大小 */
-  width: 100%;
 }
 
 .scroll-down-btn {
@@ -885,10 +915,6 @@ const startSimulation = () => {
     margin-bottom: 40px;
   }
   
-  .hero-logo {
-    max-width: 200px;
-    margin-bottom: 20px;
-  }
 }
 </style>
 

@@ -200,6 +200,27 @@ def generate_ontology():
                 document_texts.append(text)
                 all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
         
+        # 思想家记忆文件（独立上传入口，可选）：在语料中显式标注角色，
+        # 让本体/图谱生成能区分"知识库种子"与"思想家人设记忆"
+        thinker_files = request.files.getlist('thinker_files')
+        for file in thinker_files:
+            if file and file.filename and allowed_file(file.filename):
+                file_info = ProjectManager.save_file_to_project(
+                    project.project_id,
+                    file,
+                    file.filename
+                )
+                project.files.append({
+                    "filename": file_info["original_filename"],
+                    "size": file_info["size"],
+                    "role": "thinker_memory"
+                })
+
+                text = FileParser.extract_text(file_info["path"])
+                text = TextProcessor.preprocess_text(text)
+                document_texts.append(text)
+                all_text += f"\n\n=== [思想家记忆] {file_info['original_filename']} ===\n{text}"
+
         if not document_texts:
             ProjectManager.delete_project(project.project_id)
             return jsonify({
